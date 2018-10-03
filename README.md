@@ -11,7 +11,7 @@ Testing and Development should run against an Intuit QuickBooks API sandbox. You
 
 The following is a sample config file:
 
-quickbooksConfig.yml (for OAuth 2)
+config/quickbooksConfig.yml (for OAuth 2)
 
 ```
 companyId           : ""
@@ -22,9 +22,11 @@ consumerToken       : "" Leave empty
 consumerSecret      : "" Leave empty
 hostname            : "sandbox-quickbooks.api.intuit.com"
 loggingEnabled      : "true"
+```
 
-quickbooksConfig.yml (for OAuth 1)
+config/quickbooksConfig.yml (for OAuth 1)
 
+```
 hostname            : "sandbox-quickbooks.api.intuit.com"
 consumerToken       : ""
 consumerSecret      : ""
@@ -33,7 +35,8 @@ oauthSecret         : ""
 loggingEnabled      : "true"
 ```
 
-You can gather these pieces of information by following the instructions found on QuickBooks' Developer web site.
+You can gather these pieces of information by following the instructions found on QuickBooks' Developer web site, and generate an `oauth2RefreshToken` for your app using Intuit's [OAuth 2.0 Playground](https://developer.intuit.com/v2/ui#/playground).
+
 
 Logging
 -------
