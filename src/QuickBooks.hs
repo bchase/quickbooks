@@ -92,6 +92,9 @@ module QuickBooks
   , queryCategoryCount'
   , queryMaxCategoriesFrom
   , queryMaxCategoriesFrom'
+  -- General
+  , queryQuickBooks
+  , queryQuickBooks'
   ) where
 
 import QuickBooks.Authentication
