@@ -32,7 +32,7 @@ import qualified Network.OAuth.OAuth2      as OAuth2
 import qualified Text.Email.Validate       as Email (EmailAddress, toByteString)
 
 import           Data.ByteString.Char8
-import           Data.Aeson                (encode, eitherDecode, object, Value(String))
+import           Data.Aeson                (encode, eitherDecode, object, Value(String, Null))
 import           Data.String.Interpolate   (i)
 import           Network.HTTP.Client       (httpLbs
                                            ,parseUrlThrow
@@ -173,7 +173,7 @@ sendInvoiceRequest :: APIEnv
                    -> Email.EmailAddress
                    -> IO (Either String (QuickBooksResponse Invoice))
 sendInvoiceRequest (OAuth1 tok) iId emailAddr = sendInvoiceRequestOAuth tok iId emailAddr
-sendInvoiceRequest (OAuth2 tok) iId emailAddr = return $ Left "Not implemented " -- sendInvoiceRequestOAuth2 tok iId emailAddr
+sendInvoiceRequest (OAuth2 tok) iId emailAddr = sendInvoiceRequestOAuth2 tok iId emailAddr
 
 --- OAuth 1 ---
 sendInvoiceRequestOAuth :: APIEnv
@@ -196,29 +196,26 @@ invoiceURITemplate :: APIConfig -> String
 invoiceURITemplate APIConfig{..} = [i|https://#{hostname}/v3/company/#{companyId}/invoice/|]
 
 --- OAuth 2 ---
--- sendInvoiceRequestOAuth2 :: APIEnv
---                    => OAuth2.AccessToken
---                    -> InvoiceId
---                    -> Email.EmailAddress
---                    -> IO (Either String (QuickBooksResponse Invoice))
--- sendInvoiceRequestOAuth2 tok iId emailAddr =  do
---   let apiConfig = ?apiConfig
---   let eitherQueryURI = parseURI strictURIParserOptions . pack $ [i|#{invoiceURITemplate apiConfig}#{unInvoiceId iId}/send?sendTo=#{Email.toByteString emailAddr}|]
---   -- Made for logging
---   req'  <- parseUrlThrow $ escapeURIString isUnescapedInURI [i|#{invoiceURITemplate apiConfig}#{unInvoiceId iId}/send?sendTo=#{Email.toByteString emailAddr}|]
---   case eitherQueryURI of
---     Left err -> return (Left . show $ err)
---     Right queryURI -> do
---       -- Make the call
---       eitherResponse <- qbAuthPostBS ?manager tok queryURI ------ !!! Something goes here !!! -------
---       logAPICall req'
---       case eitherResponse of
---         (Left err) -> return (Left . show $ err)
---         (Right resp) -> do
---           return $ eitherDecode resp
-
--- invoiceURITemplate :: APIConfig -> String
--- invoiceURITemplate APIConfig{..} = [i|https://#{hostname}/v3/company/#{companyId}/invoice/|]
+sendInvoiceRequestOAuth2 :: APIEnv
+                   => OAuth2.AccessToken
+                   -> InvoiceId
+                   -> Email.EmailAddress
+                   -> IO (Either String (QuickBooksResponse Invoice))
+sendInvoiceRequestOAuth2 tok iId emailAddr =  do
+  let apiConfig = ?apiConfig
+  let eitherQueryURI = parseURI strictURIParserOptions . pack $ [i|#{invoiceURITemplate apiConfig}#{unInvoiceId iId}/send?sendTo=#{Email.toByteString emailAddr}|]
+  -- Made for logging
+  req'  <- parseUrlThrow $ escapeURIString isUnescapedInURI [i|#{invoiceURITemplate apiConfig}#{unInvoiceId iId}/send?sendTo=#{Email.toByteString emailAddr}|]
+  case eitherQueryURI of
+    Left err -> return (Left . show $ err)
+    Right queryURI -> do
+      -- Make the call
+      eitherResponse <- qbAuthPostOctetStreamBS ?manager tok queryURI Null
+      logAPICall req'
+      case eitherResponse of
+        (Left err) -> return (Left . show $ err)
+        (Right resp) -> do
+          return $ eitherDecode resp
 
 
 ----- Post Invoice -----

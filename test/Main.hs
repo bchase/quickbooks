@@ -54,40 +54,41 @@ main = do
         defaultMain $ tests (OAuth2 $ OAuth2.accessToken authTokens)
 
 tests :: OAuthTokens -> TestTree
-tests tok = testGroup "API Calls" [ testCase "Query Customer" $ queryCustomerTest tok
-                              , testCase "Query Empty Customer" $ queryEmptyCustomerTest tok
-                              , testCase "Query Max Customer" $ queryMaxCustomerTest tok
-                              , testCase "Query Count Customer" $ queryCountCustomerTest tok
-                              , testCase "Create Customer" $ createCustomerTest tok
-                              , testCase "Read Customer" $ readCustomerTest tok
-                              , testCase "Update Customer" $ updateCustomerTest tok
-                              , testCase "Delete Customer" $ deleteCustomerTest tok
-                              , testCase "Read Bundle" $ readBundleTest tok
-                              , testCase "Query Bundle" $ queryBundleTest tok
-                              , testCase "Query Empty Bundle" $ queryEmptyBundleTest tok
-                              , testCase "Query Category" $ queryCategoryTest tok
-                              , testCase "Query Empty Category" $ queryEmptyCategoryTest tok
-                              , testCase "Query Count Categories" $ queryCountCategoryTest tok
-                              , testCase "Query Max Categories" $ queryMaxCategoryTest tok
-                              , testCase "Create Category" $ createCategoryTest tok
-                              , testCase "Read Category" $ readCategoryTest tok
-                              , testCase "Update Category" $ updateCategoryTest tok
-                              , testCase "Delete Category" $ deleteCategoryTest tok
-                              , testCase "Query Item" $ queryItemTest tok
-                              , testCase "Query Count Items" $ queryCountItemTest tok
-                              , testCase "Query Empty Item" $ queryEmptyItemTest tok
-                              , testCase "Query Max Items" $ queryMaxItemTest tok
-                              , testCase "Create Item" $ createItemTest tok
-                              , testCase "Read Item" $ readItemTest tok
-                              , testCase "Update Item" $ updateItemTest tok
-                              , testCase "Delete Item" $ deleteItemTest tok
-                              , testCase "Create Invoice" $ createInvoiceTest tok
-                              , testCase "Read Invoice" $ readInvoiceTest tok
-                              , testCase "Update Invoice" $ updateInvoiceTest tok
-                              , testCase "Delete Invoice" $ deleteInvoiceTest tok
-                              -- , testCase "Email Invoice" $ emailInvoiceTest tok
-                              , testCase "Temp Tokens" $ tempTokenTest
-                              ]
+tests tok = testGroup "API Calls"
+  [ testCase "Query Customer" $ queryCustomerTest tok
+  , testCase "Query Empty Customer" $ queryEmptyCustomerTest tok
+  , testCase "Query Max Customer" $ queryMaxCustomerTest tok
+  , testCase "Query Count Customer" $ queryCountCustomerTest tok
+  , testCase "Create Customer" $ createCustomerTest tok
+  , testCase "Read Customer" $ readCustomerTest tok
+  , testCase "Update Customer" $ updateCustomerTest tok
+  , testCase "Delete Customer" $ deleteCustomerTest tok
+  , testCase "Read Bundle" $ readBundleTest tok
+  , testCase "Query Bundle" $ queryBundleTest tok
+  , testCase "Query Empty Bundle" $ queryEmptyBundleTest tok
+  , testCase "Query Category" $ queryCategoryTest tok
+  , testCase "Query Empty Category" $ queryEmptyCategoryTest tok
+  , testCase "Query Count Categories" $ queryCountCategoryTest tok
+  , testCase "Query Max Categories" $ queryMaxCategoryTest tok
+  , testCase "Create Category" $ createCategoryTest tok
+  , testCase "Read Category" $ readCategoryTest tok
+  , testCase "Update Category" $ updateCategoryTest tok
+  , testCase "Delete Category" $ deleteCategoryTest tok
+  , testCase "Query Item" $ queryItemTest tok
+  , testCase "Query Count Items" $ queryCountItemTest tok
+  , testCase "Query Empty Item" $ queryEmptyItemTest tok
+  , testCase "Query Max Items" $ queryMaxItemTest tok
+  , testCase "Create Item" $ createItemTest tok
+  , testCase "Read Item" $ readItemTest tok
+  , testCase "Update Item" $ updateItemTest tok
+  , testCase "Delete Item" $ deleteItemTest tok
+  , testCase "Create Invoice" $ createInvoiceTest tok
+  , testCase "Read Invoice" $ readInvoiceTest tok
+  , testCase "Update Invoice" $ updateInvoiceTest tok
+  , testCase "Delete Invoice" $ deleteInvoiceTest tok
+  , testCase "Email Invoice" $ emailInvoiceTest tok
+  , testCase "Temp Tokens" $ tempTokenTest
+  ]
 
 -----------  Note: There is a very small chance that they may fail due to duplicate name errors on create.
 -- Tests --  Just rerun the tests and they will likely pass.

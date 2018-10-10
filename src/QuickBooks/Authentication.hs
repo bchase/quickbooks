@@ -33,6 +33,7 @@ module QuickBooks.Authentication
   , disconnectRequest
   , qbAuthGetBS
   , qbAuthPostBS
+  , qbAuthPostOctetStreamBS
   , fetchAccessToken
   , readOAuth2Config
   , makeOAuth2
@@ -89,12 +90,25 @@ qbAuthPostBS :: ToJSON a =>  Manager -> OAuth2.AccessToken
             -> URI
             -> a
             -> IO (OAuth2.OAuth2Result String BSL.ByteString)
-qbAuthPostBS manager tok url pb = do
+qbAuthPostBS manager tok url pb = qbAuthPostBS' manager tok "application/json" url pb
+
+qbAuthPostOctetStreamBS :: ToJSON a =>  Manager -> OAuth2.AccessToken
+            -> URI
+            -> a
+            -> IO (OAuth2.OAuth2Result String BSL.ByteString)
+qbAuthPostOctetStreamBS manager tok url pb = qbAuthPostBS' manager tok "application/octet-stream" url pb
+
+qbAuthPostBS' :: ToJSON a =>  Manager -> OAuth2.AccessToken
+            -> ByteString
+            -> URI
+            -> a
+            -> IO (OAuth2.OAuth2Result String BSL.ByteString)
+qbAuthPostBS' manager tok contentType url pb = do
   req <- OAuth2.uriToRequest url
   OAuth2.authRequest req upReq manager
   where upBody req = req {requestBody =  RequestBodyBS $ BSL.toStrict $ encode pb }
         upHeaders  = OAuth2.updateRequestHeaders (Just tok) . OAuth2.setMethod HT.POST
-        upContentHeader req = req {requestHeaders = ((HT.hContentType,"application/json") : (requestHeaders req) )}
+        upContentHeader req = req {requestHeaders = ((HT.hContentType, contentType) : (requestHeaders req) )}
         upReq      = upContentHeader . upBody . upHeaders
 
 --------------------------------------------------
