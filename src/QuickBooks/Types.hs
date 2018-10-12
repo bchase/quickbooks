@@ -230,6 +230,10 @@ data QuickBooksOAuthRequest a where
   GetAccessTokens         :: OAuthVerifier -> QuickBooksOAuthQuery OAuthToken
   DisconnectQuickBooks    :: QuickBooksOAuthQuery ()
 
+data CustomerDataQuery
+  = CustomerDisplayName Text
+  | CustomerPrimaryEmailAddr E.EmailAddress
+
 data QuickBooksRequest a where
   CreateInvoice           :: Invoice     -> QuickBooksQuery Invoice
   ReadInvoice             :: InvoiceId   -> QuickBooksQuery Invoice
@@ -244,6 +248,7 @@ data QuickBooksRequest a where
   QueryCustomer           :: Text -> QuickBooksQuery [Customer]
   QueryCountCustomer      :: (QuickBooksQuery Int)
   QueryMaxCustomersFrom   :: Int -> QuickBooksQuery [Customer]
+  QueryCustomerFor        :: CustomerDataQuery -> QuickBooksQuery [Customer]
 
   CreateItem              :: Item -> QuickBooksQuery [Item]
   ReadItem                :: Text -> QuickBooksQuery [Item]

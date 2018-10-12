@@ -17,6 +17,7 @@ import           Data.String.Interpolate   (i)
 import           Data.Aeson.QQ
 import           Control.Monad         (ap, liftM)
 import           Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString.Char8 as BS
 import           Data.ByteString.Char8 (pack)
 import           Data.Maybe            (fromJust)
 import           Data.String
@@ -26,7 +27,7 @@ import           QuickBooks
 import           QuickBooks.Authentication
 import           QuickBooks.QBText
 import           System.Environment    (getEnvironment)
-import qualified Text.Email.Validate   as E (EmailAddress, emailAddress)
+import qualified Text.Email.Validate   as E (EmailAddress, emailAddress, toByteString)
 import qualified Network.OAuth.OAuth2            as OAuth2
 
 import           Data.Aeson                (encode, eitherDecode)
@@ -55,40 +56,42 @@ main = do
 
 tests :: OAuthTokens -> TestTree
 tests tok = testGroup "API Calls"
-  [ testCase "Query Customer" $ queryCustomerTest tok
-  , testCase "Query Empty Customer" $ queryEmptyCustomerTest tok
-  , testCase "Query Max Customer" $ queryMaxCustomerTest tok
-  , testCase "Query Count Customer" $ queryCountCustomerTest tok
-  , testCase "Create Customer" $ createCustomerTest tok
-  , testCase "Read Customer" $ readCustomerTest tok
-  , testCase "Update Customer" $ updateCustomerTest tok
-  , testCase "Delete Customer" $ deleteCustomerTest tok
-  , testCase "Read Bundle" $ readBundleTest tok
-  , testCase "Query Bundle" $ queryBundleTest tok
-  , testCase "Query Empty Bundle" $ queryEmptyBundleTest tok
-  , testCase "Query Category" $ queryCategoryTest tok
-  , testCase "Query Empty Category" $ queryEmptyCategoryTest tok
-  , testCase "Query Count Categories" $ queryCountCategoryTest tok
-  , testCase "Query Max Categories" $ queryMaxCategoryTest tok
-  , testCase "Create Category" $ createCategoryTest tok
-  , testCase "Read Category" $ readCategoryTest tok
-  , testCase "Update Category" $ updateCategoryTest tok
-  , testCase "Delete Category" $ deleteCategoryTest tok
-  , testCase "Query Item" $ queryItemTest tok
-  , testCase "Query Count Items" $ queryCountItemTest tok
-  , testCase "Query Empty Item" $ queryEmptyItemTest tok
-  , testCase "Query Max Items" $ queryMaxItemTest tok
-  , testCase "Create Item" $ createItemTest tok
-  , testCase "Read Item" $ readItemTest tok
-  , testCase "Update Item" $ updateItemTest tok
-  , testCase "Delete Item" $ deleteItemTest tok
-  , testCase "Create Invoice" $ createInvoiceTest tok
-  , testCase "Read Invoice" $ readInvoiceTest tok
-  , testCase "Update Invoice" $ updateInvoiceTest tok
-  , testCase "Delete Invoice" $ deleteInvoiceTest tok
-  , testCase "Email Invoice" $ emailInvoiceTest tok
-  , testCase "Temp Tokens" $ tempTokenTest
-  ]
+  [ testCase "Query Customer For" $ queryCustomerForTest tok ]
+  -- [ testCase "Query Customer" $ queryCustomerTest tok
+  -- , testCase "Query Customer For" $ queryCustomerForTest tok
+  -- , testCase "Query Empty Customer" $ queryEmptyCustomerTest tok
+  -- , testCase "Query Max Customer" $ queryMaxCustomerTest tok
+  -- , testCase "Query Count Customer" $ queryCountCustomerTest tok
+  -- , testCase "Create Customer" $ createCustomerTest tok
+  -- , testCase "Read Customer" $ readCustomerTest tok
+  -- , testCase "Update Customer" $ updateCustomerTest tok
+  -- , testCase "Delete Customer" $ deleteCustomerTest tok
+  -- , testCase "Read Bundle" $ readBundleTest tok
+  -- , testCase "Query Bundle" $ queryBundleTest tok
+  -- , testCase "Query Empty Bundle" $ queryEmptyBundleTest tok
+  -- , testCase "Query Category" $ queryCategoryTest tok
+  -- , testCase "Query Empty Category" $ queryEmptyCategoryTest tok
+  -- , testCase "Query Count Categories" $ queryCountCategoryTest tok
+  -- , testCase "Query Max Categories" $ queryMaxCategoryTest tok
+  -- , testCase "Create Category" $ createCategoryTest tok
+  -- , testCase "Read Category" $ readCategoryTest tok
+  -- , testCase "Update Category" $ updateCategoryTest tok
+  -- , testCase "Delete Category" $ deleteCategoryTest tok
+  -- , testCase "Query Item" $ queryItemTest tok
+  -- , testCase "Query Count Items" $ queryCountItemTest tok
+  -- , testCase "Query Empty Item" $ queryEmptyItemTest tok
+  -- , testCase "Query Max Items" $ queryMaxItemTest tok
+  -- , testCase "Create Item" $ createItemTest tok
+  -- , testCase "Read Item" $ readItemTest tok
+  -- , testCase "Update Item" $ updateItemTest tok
+  -- , testCase "Delete Item" $ deleteItemTest tok
+  -- , testCase "Create Invoice" $ createInvoiceTest tok
+  -- , testCase "Read Invoice" $ readInvoiceTest tok
+  -- , testCase "Update Invoice" $ updateInvoiceTest tok
+  -- , testCase "Delete Invoice" $ deleteInvoiceTest tok
+  -- , testCase "Email Invoice" $ emailInvoiceTest tok
+  -- , testCase "Temp Tokens" $ tempTokenTest
+  -- ]
 
 -----------  Note: There is a very small chance that they may fail due to duplicate name errors on create.
 -- Tests --  Just rerun the tests and they will likely pass.
@@ -198,6 +201,32 @@ queryCustomerTest oAuthToken = do
         Left err -> assertEither "Error making QBText in queryCustomerTest" (filterTextForQB "21")
         Right existingId ->
           assertBool (show $ customerId customer) (customerId customer == Just existingId)
+
+---- Query Customer For ----
+queryCustomerForTest :: OAuthTokens -> Assertion
+queryCustomerForTest oAuthToken = do
+  let goodEmail = testEmail
+      badEmail = fromJust $ E.emailAddress "fail@test.com"
+
+      unEmail :: E.EmailAddress -> String
+      unEmail = BS.unpack . E.toByteString -- TODO defined elsewhere
+      unQBEmail :: QuickBooks.Types.EmailAddress -> String
+      unQBEmail = T.unpack . QuickBooks.Types.emailAddress
+
+  _ <- createCustomer oAuthToken =<< makeTestCustomer
+  goodResp  <- queryCustomerFor oAuthToken $ CustomerPrimaryEmailAddr goodEmail
+  emptyResp <- queryCustomerFor oAuthToken $ CustomerPrimaryEmailAddr badEmail
+
+  case (goodResp, emptyResp) of
+    (Left badResp, _) ->
+      error $ "Bad `queryCustomerFor` resp" ++ show badResp
+    (_, Left badResp) ->
+      error $ "Bad `queryCustomerFor` resp" ++ show badResp
+    (Right (QuickBooksCustomerResponse []), Right (QuickBooksCustomerResponse [])) -> do
+      error "Should have returned Customers matching emails, but was []"
+    (Right (QuickBooksCustomerResponse customers), Right (QuickBooksCustomerResponse [])) -> do
+      assertBool "Returned Customers who didn't match on email" $
+        (all (\customer -> (unQBEmail $ fromJust $ customerPrimaryEmailAddr customer) == unEmail goodEmail) customers)
 
 ---- Query Empty Customer ----
 queryEmptyCustomerTest :: OAuthTokens -> Assertion
@@ -638,6 +667,9 @@ trashEmailAccount = "xvh221@sharklasers.com"
 testEmail :: E.EmailAddress
 testEmail = fromJust $ E.emailAddress trashEmailAccount
 
+testEmailQB :: QuickBooks.Types.EmailAddress
+testEmailQB = QuickBooks.Types.EmailAddress trashEmailAccount
+
 testLine :: Line
 testLine = Line
   { lineId                    = Nothing
@@ -765,42 +797,42 @@ makeTestCustomer :: IO Customer
 makeTestCustomer = do
   customerName' <- getTestCustomerName
   return $ Customer
-    { customerId = Nothing                      -- Maybe QBText
-    , customerSyncToken = Nothing               -- Maybe SyncToken
-    , customerMetaData = Nothing                -- Maybe ModificationMetaData
-    , customerTitle = Nothing                   -- Maybe QBText -- def null
-    , customerGivenName = Nothing               -- Maybe QBText -- max 25 def null
-    , customerMiddleName = Nothing              -- Maybe QBText -- max 25, def null
-    , customerFamilyName = Nothing              -- Maybe QBText -- max 25, def null
-    , customerSuffix = Nothing                  -- Maybe QBText -- max 10, def null
-    , customerFullyQualifiedName = Nothing      -- Maybe QBText
-    , customerCompanyName = Nothing             -- Maybe QBText -- max 50, def null
-    , customerDisplayName = customerName'       -- QBText -- unique
-    , customerPrintOnCheckName = Nothing        -- Maybe QBText -- max 100
-    , customerActive = Nothing                  -- Maybe Bool -- def true
-    , customerPrimaryPhone = Nothing            -- Maybe TelephoneNumber
-    , customerAlternatePhone = Nothing          -- Maybe TelephoneNumber
-    , customerMobile = Nothing                  -- Maybe TelephoneNumber
-    , customerFax = Nothing                     -- Maybe TelephoneNumber
-    , customerPrimaryEmailAddr = Nothing        -- Maybe EmailAddress
-    , customerWebAddr = Nothing                 -- Maybe WebSiteAddress
-    , customerDefaultTaxCodeRef = Nothing       -- Maybe TaxCodeRef
-    , customerTaxable = Nothing                 -- Maybe Bool
-    , customerBillAddr = Nothing                -- Maybe BillAddr
-    , customerShipAddr = Nothing                -- Maybe ShipAddr
-    , customerNotes = Nothing                   -- Maybe QBText -- max 2000
-    , customerJob = Nothing                     -- Maybe Bool -- def false or null
-    , customerBillWithParent = Nothing          -- Maybe Bool -- def false or null
-    , customerParentRef = Nothing               -- Maybe CustomerRef
-    , customerLevel = Nothing                   -- Maybe Int -- def 0, up to 5
-    , customerSalesTermRef = Nothing            -- Maybe SalesTermRef
-    , customerPaymentMethodRef = Nothing        -- Maybe Reference
-    , customerBalance = Nothing                 -- Maybe Double
-    , customerOpenBalanceDate = Nothing         -- Maybe QBText
-    , customerBalanceWithJobs = Nothing         -- Maybe Double
-    , customerCurrencyRef = Nothing             -- Maybe CurrencyRef
-    , customerPreferredDeliveryMethod = Nothing -- Maybe QBText
-    , customerResaleNum = Nothing               -- Maybe QBText -- max 15
+    { customerId = Nothing                        -- Maybe QBText
+    , customerSyncToken = Nothing                 -- Maybe SyncToken
+    , customerMetaData = Nothing                  -- Maybe ModificationMetaData
+    , customerTitle = Nothing                     -- Maybe QBText -- def null
+    , customerGivenName = Nothing                 -- Maybe QBText -- max 25 def null
+    , customerMiddleName = Nothing                -- Maybe QBText -- max 25, def null
+    , customerFamilyName = Nothing                -- Maybe QBText -- max 25, def null
+    , customerSuffix = Nothing                    -- Maybe QBText -- max 10, def null
+    , customerFullyQualifiedName = Nothing        -- Maybe QBText
+    , customerCompanyName = Nothing               -- Maybe QBText -- max 50, def null
+    , customerDisplayName = customerName'         -- QBText -- unique
+    , customerPrintOnCheckName = Nothing          -- Maybe QBText -- max 100
+    , customerActive = Nothing                    -- Maybe Bool -- def true
+    , customerPrimaryPhone = Nothing              -- Maybe TelephoneNumber
+    , customerAlternatePhone = Nothing            -- Maybe TelephoneNumber
+    , customerMobile = Nothing                    -- Maybe TelephoneNumber
+    , customerFax = Nothing                       -- Maybe TelephoneNumber
+    , customerPrimaryEmailAddr = Just testEmailQB -- Maybe EmailAddress
+    , customerWebAddr = Nothing                   -- Maybe WebSiteAddress
+    , customerDefaultTaxCodeRef = Nothing         -- Maybe TaxCodeRef
+    , customerTaxable = Nothing                   -- Maybe Bool
+    , customerBillAddr = Nothing                  -- Maybe BillAddr
+    , customerShipAddr = Nothing                  -- Maybe ShipAddr
+    , customerNotes = Nothing                     -- Maybe QBText -- max 2000
+    , customerJob = Nothing                       -- Maybe Bool -- def false or null
+    , customerBillWithParent = Nothing            -- Maybe Bool -- def false or null
+    , customerParentRef = Nothing                 -- Maybe CustomerRef
+    , customerLevel = Nothing                     -- Maybe Int -- def 0, up to 5
+    , customerSalesTermRef = Nothing              -- Maybe SalesTermRef
+    , customerPaymentMethodRef = Nothing          -- Maybe Reference
+    , customerBalance = Nothing                   -- Maybe Double
+    , customerOpenBalanceDate = Nothing           -- Maybe QBText
+    , customerBalanceWithJobs = Nothing           -- Maybe Double
+    , customerCurrencyRef = Nothing               -- Maybe CurrencyRef
+    , customerPreferredDeliveryMethod = Nothing   -- Maybe QBText
+    , customerResaleNum = Nothing                 -- Maybe QBText -- max 15
     }
 
 makeTestItem :: IO Item

@@ -55,6 +55,8 @@ module QuickBooks
   , deleteCustomer'
   , queryCustomer
   , queryCustomer'
+  , queryCustomerFor
+  , queryCustomerFor'
   , queryCustomerCount
   , queryCustomerCount'
   , queryMaxCustomersFrom
@@ -199,6 +201,22 @@ queryCustomer'
   -> IO (Either String (QuickBooksResponse [Customer]))
 queryCustomer' apiConfig appConfig tok =
   queryQuickBooks' apiConfig appConfig tok . QueryCustomer
+
+queryCustomerFor
+  :: OAuthTokens
+  -> CustomerDataQuery
+  -> IO (Either String (QuickBooksResponse [Customer]))
+queryCustomerFor tok =
+  queryQuickBooks tok . QueryCustomerFor
+
+queryCustomerFor'
+  :: APIConfig
+  -> AppConfig
+  -> OAuthTokens
+  -> CustomerDataQuery
+  -> IO (Either String (QuickBooksResponse [Customer]))
+queryCustomerFor' apiConfig appConfig tok =
+  queryQuickBooks' apiConfig appConfig tok . QueryCustomerFor
 
 queryCustomerCount
   :: OAuthTokens
@@ -680,6 +698,7 @@ queryQuickBooks' apiConfig appConfig tokens' query = do
     QueryCustomer queryCustomerName     -> queryCustomerRequest tokens' queryCustomerName
     QueryMaxCustomersFrom startIndex    -> queryMaxCustomerRequest tokens' startIndex
     QueryCountCustomer                  -> countCustomerRequest tokens'
+    QueryCustomerFor query              -> queryCustomerForRequest tokens' query
     CreateItem item                     -> createItemRequest tokens' item
     ReadItem iId                        -> readItemRequest tokens' iId
     UpdateItem item                     -> updateItemRequest tokens' item

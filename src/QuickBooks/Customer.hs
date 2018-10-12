@@ -20,6 +20,7 @@
 
 module QuickBooks.Customer
   ( queryCustomerRequest
+  , queryCustomerForRequest
   , createCustomerRequest
   , readCustomerRequest
   , updateCustomerRequest
@@ -34,7 +35,10 @@ import QuickBooks.Logging
 import QuickBooks.Types
 import QuickBooks.QBText
 
+import qualified Data.ByteString.Char8     as BS
+import qualified Data.Text                 as T
 import qualified Network.OAuth.OAuth2      as OAuth2
+import qualified Text.Email.Validate       as E
 import           Data.Aeson                (encode, eitherDecode)
 import           Data.ByteString.Char8
 import           Data.String.Interpolate   (i)
@@ -368,3 +372,67 @@ queryURITemplate APIConfig{..} =
 customerURITemplate :: APIConfig -> String
 customerURITemplate APIConfig{..} =
   [i|https://#{hostname}/v3/company/#{companyId}/customer|]
+
+
+
+---- ----
+
+queryCustomerForRequest :: APIEnv
+                     => OAuthTokens
+                     -> CustomerDataQuery
+                     -> IO (Either String (QuickBooksResponse [Customer]))
+queryCustomerForRequest (OAuth1 tok) name = queryCustomerForRequestOAuth tok name
+queryCustomerForRequest (OAuth2 tok) name = queryCustomerForRequestOAuth2 tok name
+
+queryCustomerForRequestOAuth :: APIEnv
+                     => OAuthToken
+                     -> CustomerDataQuery
+                     -> IO (Either String (QuickBooksResponse [Customer]))
+queryCustomerForRequestOAuth tok dataQuery = do
+  let apiConfig = ?apiConfig
+  let uriComponent = escapeURIString isUnescapedInURIComponent [i|#{selectStatement dataQuery}|]
+  let queryURI = parseUrlThrow $ [i|#{queryURITemplate apiConfig}#{uriComponent}|]
+  req <- oauthSignRequest tok =<< queryURI
+  let oauthHeaders = requestHeaders req
+  let req' = req { method = "GET"
+                 , requestHeaders = oauthHeaders ++ [(hAccept, "application/json")]
+                 }
+  resp <- httpLbs req' ?manager
+  logAPICall req'
+  return $ eitherDecode (responseBody resp)
+
+queryCustomerForRequestOAuth2 :: APIEnv
+                            => OAuth2.AccessToken
+                            -> CustomerDataQuery
+                            -> IO (Either String (QuickBooksResponse [Customer]))
+queryCustomerForRequestOAuth2 tok dataQuery = do
+  let apiConfig = ?apiConfig
+  let uriComponent = escapeURIString isUnescapedInURIComponent [i|#{selectStatement dataQuery}|]
+  let eitherQueryURI = parseURI strictURIParserOptions . pack $ [i|#{queryURITemplate apiConfig}#{uriComponent}|]
+  -- Made for logging
+  req' <- parseUrlThrow $ [i|#{queryURITemplate apiConfig}#{uriComponent}|]
+  case eitherQueryURI of
+    Left err -> return (Left . show $ err)
+    Right queryURI -> do
+      -- Make the call
+      eitherResponse <- qbAuthGetBS ?manager tok queryURI
+      logAPICall req'
+      case eitherResponse of
+        (Left err) -> return (Left . show $ err)
+        (Right resp) -> do
+          let eitherAllCustomers = eitherDecode resp
+          case eitherAllCustomers of
+            Left err -> return (Left err)
+            Right resp -> return $ Right resp
+
+selectStatement :: CustomerDataQuery -> String
+selectStatement dq = "SELECT * FROM Customer WHERE " ++ whereClause dq
+  where
+    whereClause :: CustomerDataQuery -> String
+    whereClause (CustomerDisplayName      name ) = "DisplayName=" ++ quote (T.unpack name)
+    whereClause (CustomerPrimaryEmailAddr email) = "PrimaryEmailAddr=" ++ quote (str email)
+      where str = BS.unpack . E.toByteString
+
+    quote :: String -> String
+    quote str = "'" ++ str ++ "'"
+
