@@ -56,7 +56,7 @@ main = do
 
 tests :: OAuthTokens -> TestTree
 tests tok = testGroup "API Calls"
-  [ testCase "Query Customer For" $ queryCustomerForTest tok ]
+  [ testCase "Create Sales Receipt" $ createSalesReceiptTest tok ]
   -- [ testCase "Query Customer" $ queryCustomerTest tok
   -- , testCase "Query Customer For" $ queryCustomerForTest tok
   -- , testCase "Query Empty Customer" $ queryEmptyCustomerTest tok
@@ -631,6 +631,19 @@ emailInvoiceTest oAuthToken = do
         deleteInvoice oAuthToken cInvoiceId (fromJust (invoiceSyncToken cInvoice))
         assertEither "I sent an invoice!" eitherSendInvoice
 
+
+---- Sales Receipts ----
+
+createSalesReceiptTest :: OAuthTokens -> Assertion
+createSalesReceiptTest oAuthToken = do
+  resp <- createSalesReceipt oAuthToken testSalesReceipt
+  case resp of
+    Left err -> assertEither ("Failed `createSalesReceipt`: " ++ err) resp
+    Right (QuickBooksSalesReceiptResponse salesReceipt) -> do
+     -- TODO -- deleteSalesReceipt oAuthToken (fromJust (salesReceiptId salesReceipt)) (fromJust (salesReceiptSyncToken salesReceipt))
+     assertEither "I created an invoice!" resp
+
+
 ---- Temp Tokens ----
 tempTokenTest :: Assertion
 tempTokenTest = do
@@ -792,6 +805,12 @@ getTestCustomerName = do
   -- Ignoring case check (Should always be a QBText)
   case (filterTextForQB $ T.pack $ "testCustomerName" ++ show arbInt) of
     Right eitherName -> return eitherName
+
+testSalesReceipt :: SalesReceipt
+testSalesReceipt = SalesReceipt
+  { salesReceiptId   = Nothing
+  , salesReceiptLine = [testLine]
+  }
 
 makeTestCustomer :: IO Customer
 makeTestCustomer = do

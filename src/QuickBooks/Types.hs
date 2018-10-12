@@ -149,6 +149,9 @@ data instance QuickBooksResponse [Category] =
 data instance QuickBooksResponse Int =
   QuickBooksCountResponse { quickBooksCountResponse :: Int}
 
+data instance QuickBooksResponse SalesReceipt =
+  QuickBooksSalesReceiptResponse { quickBooksSalesReceiptResponse :: SalesReceipt}
+
 instance FromJSON (QuickBooksResponse Int) where
   parseJSON (Object o) = parseQueryResponse o
     where
@@ -161,7 +164,6 @@ instance FromJSON (QuickBooksResponse Int) where
 instance FromJSON (QuickBooksResponse Invoice) where
   parseJSON (Object o) = QuickBooksInvoiceResponse `fmap` (o .: "Invoice")
   parseJSON _          = fail "Could not parse invoice response from QuickBooks"
-
 
 instance FromJSON (QuickBooksResponse DeletedInvoice) where
   parseJSON (Object o) = QuickBooksDeletedInvoiceResponse `fmap` (o .: "Invoice")
@@ -221,6 +223,11 @@ instance FromJSON (QuickBooksResponse DeletedCategory) where
   parseJSON (Object o) = QuickBooksDeletedCategoryResponse `fmap` (o .: "Item")
   parseJSON _          = fail "Could not parse deleted category response from QuickBooks"
 
+instance FromJSON (QuickBooksResponse SalesReceipt) where
+  parseJSON (Object o) = QuickBooksSalesReceiptResponse `fmap` (o .: "SalesReceipt")
+  parseJSON _          = fail "Could not parse sales resceipt response from QuickBooks"
+
+
 
 type QuickBooksQuery a = QuickBooksRequest (QuickBooksResponse a)
 type QuickBooksOAuthQuery a = QuickBooksOAuthRequest (QuickBooksResponse a)
@@ -268,6 +275,8 @@ data QuickBooksRequest a where
   QueryCategory           :: Text -> QuickBooksQuery [Category]
   QueryCountCategory      :: (QuickBooksQuery Int)
   QueryMaxCategoriesFrom  :: Int -> QuickBooksQuery [Category]
+
+  CreateSalesReceipt      :: SalesReceipt -> QuickBooksQuery SalesReceipt
 
 newtype InvoiceId = InvoiceId {unInvoiceId :: Text}
   deriving (Show, Eq, FromJSON, ToJSON)
@@ -768,6 +777,16 @@ data DeletedCategory = DeletedCategory
   , deletedCategorystatus :: !Text
   } deriving (Show, Eq)
 
+
+newtype SalesReceiptId = SalesReceiptId {unSalesReceiptId :: Text}
+  deriving (Show, Eq, FromJSON, ToJSON)
+
+data SalesReceipt = SalesReceipt
+  { salesReceiptId               :: !(Maybe SalesReceiptId)
+  , salesReceiptLine             :: ![Line]
+  } deriving (Show, Eq)
+
+
 $(deriveJSON defaultOptions
                { fieldLabelModifier = drop 8
                , omitNothingFields  = True
@@ -901,3 +920,8 @@ $(deriveJSON defaultOptions
 $(deriveJSON defaultOptions
                { fieldLabelModifier = drop (length ("deletedCategory" :: String)) }
              ''DeletedCategory)
+
+$(deriveJSON defaultOptions
+               { fieldLabelModifier = drop 12
+               , omitNothingFields  = True }
+             ''SalesReceipt)

@@ -67,6 +67,7 @@ library
                        QuickBooks.Logging
                        QuickBooks.QBText
                        QuickBooks.Types
+                       QuickBooks.SalesReceipt
 
 
   hs-source-dirs:      src
@@ -111,6 +112,7 @@ test-suite api-tests
                   , QuickBooks.Logging
                   , QuickBooks.QBText
                   , QuickBooks.Types
+                  , QuickBooks.SalesReceipt
 
   build-depends:
                     base >= 4.7 && < 5

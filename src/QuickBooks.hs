@@ -97,6 +97,9 @@ module QuickBooks
   -- General
   , queryQuickBooks
   , queryQuickBooks'
+  -- SalesReceipt
+  , createSalesReceipt
+  , createSalesReceipt'
   ) where
 
 import QuickBooks.Authentication
@@ -120,6 +123,7 @@ import QuickBooks.Invoice      ( createInvoiceRequest
                                , updateInvoiceRequest
                                , sendInvoiceRequest
                                )
+import QuickBooks.SalesReceipt ( createSalesReceiptRequest )
 import QuickBooks.Item
 import QuickBooks.Bundle
 import QuickBooks.Category
@@ -469,6 +473,28 @@ queryMaxCategoriesFrom' apiConfig appConfig tok =
 
 
 
+-------------------
+-- Sales Receipt --
+-------------------
+
+createSalesReceipt
+  :: OAuthTokens
+  -> SalesReceipt
+  -> IO (Either String (QuickBooksResponse SalesReceipt))
+createSalesReceipt tok =
+  queryQuickBooks tok . CreateSalesReceipt
+
+createSalesReceipt'
+  :: APIConfig
+  -> AppConfig
+  -> OAuthTokens
+  -> SalesReceipt
+  -> IO (Either String (QuickBooksResponse SalesReceipt))
+createSalesReceipt' apiConfig appConfig tok =
+  queryQuickBooks' apiConfig appConfig tok . CreateSalesReceipt
+
+
+
 -- Unused DocTest (removed 6-26-17)
 -- | Create an invoice.
 --
@@ -716,6 +742,7 @@ queryQuickBooks' apiConfig appConfig tokens' query = do
     QueryCategory queryCategoryName     -> queryCategoryRequest tokens' queryCategoryName
     QueryCountCategory                  -> countCategoryRequest tokens'
     QueryMaxCategoriesFrom startIndex   -> queryMaxCategoryRequest tokens' startIndex
+    CreateSalesReceipt salesReceipt     -> createSalesReceiptRequest tokens' salesReceipt
 
 queryQuickBooksOAuth :: Maybe OAuthToken
                      -> QuickBooksOAuthQuery a
