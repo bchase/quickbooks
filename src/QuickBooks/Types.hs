@@ -150,7 +150,7 @@ data instance QuickBooksResponse Int =
   QuickBooksCountResponse { quickBooksCountResponse :: Int}
 
 data instance QuickBooksResponse SalesReceipt =
-  QuickBooksSalesReceiptResponse { quickBooksSalesReceiptResponse :: SalesReceipt}
+  QuickBooksSalesReceiptResponse { quickBooksResponseSalesReceipt  :: SalesReceipt}
 
 instance FromJSON (QuickBooksResponse Int) where
   parseJSON (Object o) = parseQueryResponse o
